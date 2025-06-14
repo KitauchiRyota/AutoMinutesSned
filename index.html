@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <title>講座後mtg議事録　自動送信</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+
+    button {
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>講座後mtg議事録　自動送信</h1>
+
+  <label for="weekdaySelect">クラスを選択してください</label>
+  <select id="weekdaySelect" name="select1">
+    <option value=""></option>
+    <option value="月曜前半">月曜前半</option>
+    <option value="月曜後半">月曜後半</option>
+    <option value="火曜前半">火曜前半</option>
+    <option value="火曜後半">火曜後半</option>
+    <option value="水曜前半">水曜前半</option>
+    <option value="水曜後半">水曜後半</option>
+    <option value="木曜前半">木曜前半</option>
+    <option value="木曜後半">木曜後半</option>
+    <option value="金曜前半">金曜前半</option>
+    <option value="金曜後半">金曜後半</option>
+    <option value="土曜前半">土曜前半</option>
+    <option value="土曜後半">土曜後半</option>
+  </select>
+
+  <br>
+  <button onclick="sendMinute()">送信</button>
+  <div>連打しないでね</div>
+  <div id="statusMessage">※ボタン押してから若干ラグがあります。</div>
+
+  <script>
+    const selectElement = document.getElementById('weekdaySelect');
+      const statusMessageDiv = document.getElementById('statusMessage');
+      /**
+       * 送信ボタンが押されたときにGAS関数を呼び出す
+       */
+      function sendMinute() {
+        const selectedValue = selectElement.value; // 選択されたoptionのvalueを取得
+
+        // エラーメッセージとステータスをクリアし、ローディングを表示
+        statusMessageDiv.innerText = '';
+
+        if (selectedValue) { // 何か選択された場合のみGASを呼び出す
+          google.script.run
+            .withSuccessHandler(function() {
+              // 成功した場合の処理
+              statusMessageDiv.innerText = "Slackに議事録を送信しました！";
+            })
+            .withFailureHandler(function() {
+              // 失敗した場合の処理
+              statusMessageDiv.innerText = "エラー：送信できませんでした";
+            })
+            .checkDiff(selectedValue); // GASの関数と選択値を引数として渡す
+        } else {
+          statusMessageDiv.innerText = 'クラスを選択してください。';
+        }
+      }
+  </script>
+</body>
+
+</html>

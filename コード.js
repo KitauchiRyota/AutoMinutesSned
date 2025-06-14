@@ -1,4 +1,9 @@
-function checkDiff() {
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('議事録自動送信'); // ブラウザのタブに表示されるタイトル
+}
+
+function checkDiff(classday) {
   /**
    * 前回プログラム実行時の内容は、外部ファイルに出力することで差分を計算
    * プログラムはWebアプリとしてデプロイし、各ユーザーの認証をスキップ 
@@ -6,12 +11,19 @@ function checkDiff() {
    * 冗長部分が多すぎるので，後でリファクタリングする
    */
 
-  const preDocURL = "***REMOVED***";
+/**
+ * 運用方法
+ * １．講座前に講座後mtg議事録作成
+ * ２．キャッシュ用の議事録を手動でコピー
+ * ３．キャッシュ用・議事録用のどちらもURLを手動でコピーしてこのコードに貼り付け
+ * ４．Webアプリとしてデプロイし，WebアプリのURLを議事録に貼り付け
+ */
+  const preDocURL = previousDocUrl;
   const preDoc = DocumentApp.openByUrl(preDocURL);
   const preBoby = preDoc.getBody();
   const preText = preBoby.getText();
 
-  const docURL = "***REMOVED***";
+  const docURL = currentDocUrl;
   const doc = DocumentApp.openByUrl(docURL);
   const body = doc.getBody();
   const text = body.getText();
@@ -24,8 +36,8 @@ function checkDiff() {
   const presections = [
     {
       name: "トラブル報告欄",
-      startMarker: "<!!=====2.trobulse_start=====!!>",
-      endMarker: "<!!=====2.trobulse_end=====!!>",
+      startMarker: "<!!=====2.troubles_start=====!!>",
+      endMarker: "<!!=====2.troubles_end=====!!>",
       startIndex: -1, // 初期値
       endIndex: -1    // 初期値
     },
@@ -42,8 +54,8 @@ function checkDiff() {
   const sections = [
     {
       name: "トラブル報告欄",
-      startMarker: "<!!=====2.trobulse_start=====!!>",
-      endMarker: "<!!=====2.trobulse_end=====!!>",
+      startMarker: "<!!=====2.troubles_start=====!!>",
+      endMarker: "<!!=====2.troubles_end=====!!>",
       startIndex: -1, // 初期値
       endIndex: -1    // 初期値
     },
@@ -67,11 +79,10 @@ function checkDiff() {
     presection.startIndex = preText.indexOf(presection.startMarker);
     presection.endIndex = preText.indexOf(presection.endMarker);
 
-  if (presection.startIndex === -1 || presection.endIndex === -1 || presection.endIndex <= presection.startIndex) {
-    Logger.log(`${presection.name} の開始・終了マーカーが preDocURL で見つからないか、順序が不正です。`);
-  }
+  // if (presection.startIndex === -1 || presection.endIndex === -1 || presection.endIndex <= presection.startIndex) {
+  //   Logger.log(`${presection.name} の開始・終了マーカーが preDocURL で見つからないか、順序が不正です。`);
+  // }
 }
-
 
   // 各セクションのインデックスを計算し、妥当性をチェック
   for (let i = 0; i < sections.length; i++) {
@@ -93,14 +104,14 @@ function checkDiff() {
 
   // ここから、取得したインデックスを使って後続の処理を行う
   // 例: 各セセクションのインデックスをログに出力
-  presections.forEach(section => {
-    Logger.log(`pre${section.name} - 開始インデックス: ${section.startIndex}, pre終了インデックス: ${section.endIndex}`);
-  });
-  sections.forEach(section => {
-    Logger.log(`${section.name} - 開始インデックス: ${section.startIndex}, 終了インデックス: ${section.endIndex}`);
-  });
+  // presections.forEach(section => {
+  //   Logger.log(`pre${section.name} - 開始インデックス: ${section.startIndex}, pre終了インデックス: ${section.endIndex}`);
+  // });
+  // sections.forEach(section => {
+  //   Logger.log(`${section.name} - 開始インデックス: ${section.startIndex}, 終了インデックス: ${section.endIndex}`);
+  // });
 
-  const currentTrobles = text.substring(
+  const currentTroubles = text.substring(
     sections[0].startIndex + sections[0].startMarker.length,
     sections[0].endIndex
   )//.trim();
@@ -109,7 +120,7 @@ function checkDiff() {
     sections[1].endIndex
   )//.trim();
 
-  const preTrobles = preText.substring(
+  const preTroubles = preText.substring(
     presections[0].startIndex + presections[0].startMarker.length,
     presections[0].endIndex
   )//.trim();
@@ -118,71 +129,86 @@ function checkDiff() {
     presections[1].endIndex
   )//.trim();
 
-  Logger.log("current" + currentTrobles);
-  Logger.log("pre" + preTrobles);
+  // Logger.log("current" + currentTroubles);
+  // Logger.log("pre" + preTroubles);
 
-  Logger.log("current" + currentTips);
-  Logger.log("pre" + preTips);
+  // Logger.log("current" + currentTips);
+  // Logger.log("pre" + preTips);
 
-  Logger.log(presections)
-  Logger.log(presections[0].endIndex)
+  // Logger.log(presections)troubles
+  // Logger.log(presections[0].endIndex)
 
-  // // 各セクションのインデックスを計算し、妥当性をチェック
-  // for (let i = 0; i < sectionss.length; i++) {
-  //   const sections = sectionss[i];
-  //   const currentContent = text.substring(
-  //     sections.startIndex + sections.startMarker.length,
-  //     sections.endIndex
-  //   ).trim();
-  //   Logger.log(currentContent)
-  // }
+function normalizeTextForDiff(text) {
+  // すべての空白文字（スペース、タブ、改行）を正規表現でマッチさせ、
+  // 連続するそれらを単一のスペースに置換する。
+  // これにより、空行や行末のスペース、連続するスペースなどが統一される。
+  let normalized = text.replace(/\s+/g, ' ');
 
+  // さらに、文字列全体の先頭と末尾のスペースを削除
+  normalized = normalized.trim();
+
+  return normalized;
+}
+const cleanedPreTroubles = normalizeTextForDiff(preTroubles);
+const cleanedCurrentTroubles = normalizeTextForDiff(currentTroubles);
+
+const cleanedPreTips = normalizeTextForDiff(preTips);
+const cleanedCurrentTips = normalizeTextForDiff(currentTips);
+
+  // 差分抽出クラスのインスタンスを作成
   const dmp = new diff_match_patch();
-  // var text1 = "こんにちは。これはテストの文字列です。";
-  // var text2 = "こんばんは。これは新しいテストの文字列です。";
-
-  var diffs = dmp.diff_main(currentTrobles, preTrobles);
+  let troublesDiffs = dmp.diff_main(cleanedPreTroubles,cleanedCurrentTroubles);
+  let tipsDiffs = dmp.diff_main(cleanedPreTips,cleanedCurrentTips);
 
   // 差分を「人間が読める形式」に整理（オプションだが推奨）
-  // 例えば "abc" と "axc" の差分が "a", "-b", "x", "c" のようになるのを
-  // "a", "-b+x", "c" のように整理してくれる
-  dmp.diff_cleanupSemantic(diffs);
+  // dmp.diff_cleanupSemantic(troublesDiffs);
+  // dmp.diff_cleanupSemantic(tipsDiffs);
 
-  // // Logger.log("--- 全ての差分 ---");
-  // // Logger.log(diffs); // 例: [[0, "これは"], [-1, "テスト"], [1, "新しいテスト"], [0, "の文字列です。"]]
-
-
-  var addedParts = [];
+  let troublesResults = [];
   // 差分リストをループして、挿入された部分だけを抽出する
-  for (var i = 0; i < diffs.length; i++) {
-    var operation = diffs[i][0]; // オペレーション (0: EQUAL, -1: DELETE, 1: INSERT)
-    var difftext = diffs[i][1];     // テキスト
+  for (let i = 0; i < troublesDiffs.length; i++) {
+    let operation = troublesDiffs[i][0]; // オペレーション (0: EQUAL, -1: DELETE, 1: INSERT)
+    let difftext = troublesDiffs[i][1];     // テキスト
 
     if (operation === 1) { // 挿入 (DIFF_INSERT) の場合
-      addedParts.push(difftext);
+      troublesResults.push(difftext);
     }
   }
 
-  // // Logger.log("元のtext1: " + text1);
-  // // Logger.log("元のtext2: " + text2);
-  // Logger.log("新たに追加された部分: " + JSON.stringify(addedParts)); // 配列として出力
-  // // Logger.log(type(addedParts.type));
-  // // Logger.log("新たに追加された部分（結合済み）: " + addedParts.join('')); // 全て結合して一つの文字列として出力
+  let tipsResults = [];
+  // 差分リストをループして、挿入された部分だけを抽出する
+  for (let i = 0; i < tipsDiffs.length; i++) {
+    let operation = tipsDiffs[i][0]; // オペレーション (0: EQUAL, -1: DELETE, 1: INSERT)
+    let difftext = tipsDiffs[i][1];     // テキスト
 
-  username = "通知test";
+    if (operation === 1) { // 挿入 (DIFF_INSERT) の場合
+      tipsResults.push(difftext);
+    }
+  }
+
+  Logger.log("preTroubles: " + preTroubles);
+  Logger.log("currentTroubles: " + currentTroubles);
+  Logger.log("新たに追加された部分: " + JSON.stringify(troublesResults)); // 配列として出力
+  // // Logger.log(type(troublesResults.type));
+  // // Logger.log("新たに追加された部分（結合済み）: " + troublesResults.join('')); // 全て結合して一つの文字列として出力
+
+  username = "講座後mtg議事録送信bot";
   icon_emoji = ":watermelon:";
 
   // 送信したいWebHoolkのURL
-  var webhookUrl = "***REMOVED***";
+  let webhookUrl = webhookURL;
 
   // Slack専用のリンク挿入方法
-  var message = "議事録差分抽出のテストです\n";
+  const troublesMessage =troublesResults.join("\n・").replaceAll("・ ・", "・");
+  const tipsMessage =tipsResults.join("\n・").replaceAll("・ ・", "・");
+
+  let message = classday +"の<"+docURL+"|講座後mtg議事録> です\n"+"\n*2.トラブル報告*\n・"+troublesMessage+"\n*4.Tips*\n・"+tipsMessage;
 
   // WebHookがSlackにメッセージを送信する
   // 投稿される内容は、message変数の中身です
-  var payload = JSON.stringify({ "text": addedParts.join(""), "username": username, "icon_emoji": icon_emoji });
+  let payload = JSON.stringify({ "text": message, "username": username, "icon_emoji": icon_emoji });
 
-  var options = {
+  let options = {
     method: "post",
     contentType: "application/json",
     payload: payload
@@ -190,8 +216,21 @@ function checkDiff() {
 
   UrlFetchApp.fetch(webhookUrl, options);
 
+  // // キャッシュ用ファイルを更新
+//   const troublesRegex = /(<!!=====2.troubles_start=====!!>)(.*?)(<!!=====2.troubles_end=====!!>)/g; // gフラグで全てのマッチを対象
 
-  // Browser.msgBox(JSON.stringify(addedParts));
+//   // 置換後の文字列（$1はSTART_ID、$3はEND_ID。その間に新しい文字列を挿入）
+//   const troublesReplacement = currentTroubles;
+// Logger.log("troublesReplacement:"+troublesReplacement);
+  preBoby.clear();
+  preBoby.appendParagraph("<!!=====2.troubles_start=====!!>"+currentTroubles+"<!!=====2.troubles_end=====!!>")
+  preBoby.appendParagraph("<!!=====4.tips_start=====!!>"+currentTips+"<!!=====4.tips_end=====!!>")
+// Logger.log("preBody:"+preBoby)
+
+  // ドキュメント全体で置換を実行
+  // preBoby.replaceText(troublesRegex, currentTroubles);
+
+  // Browser.msgBox(JSON.stringify(troublesResults));
 
 
   // const userProps = PropertiesService.getUserProperties();
@@ -208,66 +247,3 @@ function checkDiff() {
   //   Logger.log("差分はありません。");
   // }
 }
-
-// diff_match_patch.gs に diff_match_patch.js のコードが貼り付けられている前提
-
-function demonstrateDiffMatchPatch() {
-  var dmp = new diff_match_patch();
-
-  var text1 = "The quick brown fox jumps over the lazy dog.";
-  var text2 = "The fast black fox jumps over the lazy cat.";
-
-  // 差分を計算する
-  var diffs = dmp.diff_main(text1, text2);
-
-  // 差分を見やすく整形する (オプション)
-  dmp.diff_cleanupSemantic(diffs);
-
-  Logger.log("Diffs: " + JSON.stringify(diffs));
-
-  // パッチを作成し、適用する
-  var patch = dmp.patch_make(text1, text2, diffs);
-  Logger.log("Patch: " + JSON.stringify(patch));
-
-  var patchResult = dmp.patch_apply(patch, text1);
-  Logger.log("Patched text: " + patchResult[0]); // 適用後のテキスト
-  Logger.log("Patch applied successfully: " + patchResult[1]); // 適用に成功したかどうかのブール値の配列
-}
-
-function extractAddedParts() {
-  var dmp = new diff_match_patch();
-
-  var text1 = "The quick brown fox jumps over the lazy dog.";
-  var text2 = "The fast black fox jumps over the lazy cat.";
-
-  // 差分を計算する
-  var diffs = dmp.diff_main(text1, text2);
-
-  // （オプション）セマンティックな整形を行うことで、より自然な差分になることがあります
-  // dmp.diff_cleanupSemantic(diffs);
-
-  var addedParts = [];
-
-  // 差分リストをループして、挿入された部分だけを抽出する
-  for (var i = 0; i < diffs.length; i++) {
-    var operation = diffs[i][0]; // オペレーション (0: EQUAL, -1: DELETE, 1: INSERT)
-    var text = diffs[i][1];     // テキスト
-
-    if (operation === 1) { // 挿入 (DIFF_INSERT) の場合
-      addedParts.push(text);
-    }
-  }
-
-  Logger.log("元のtext1: " + text1);
-  Logger.log("元のtext2: " + text2);
-  Logger.log("新たに追加された部分: " + JSON.stringify(addedParts)); // 配列として出力
-  Logger.log("新たに追加された部分（結合済み）: " + addedParts.join('')); // 全て結合して一つの文字列として出力
-}
-
-// 実行結果例:
-// 元のtext1: The quick brown fox jumps over the lazy dog.
-// 元のtext2: The fast black fox jumps over the lazy cat.
-// 新たに追加された部分: ["fast black","cat"]
-// 新たに追加された部分（結合済み）: fast blackcat
-
-
